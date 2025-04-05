@@ -43,10 +43,10 @@ export function Header() {
         
         {/* Botones de autenticación */}
         <div className="flex items-center space-x-4">
-          <Link href="/login" className="text-gray-600 hover:text-blue-600">
+          <Link href="/auth/login" className="text-gray-600 hover:text-blue-600">
             Iniciar sesión
           </Link>
-          <Link href="/register">
+          <Link href="/auth/register">
             <Button variant="default">Registrarse</Button>
           </Link>
         </div>

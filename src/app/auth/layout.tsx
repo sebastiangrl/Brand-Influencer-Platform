@@ -1,6 +1,5 @@
 // app/(auth)/layout.tsx
-import Link from "next/link";
-import Image from "next/image";
+import { Header } from "@/components/marketing/header";
 
 export default function AuthLayout({
   children,
@@ -9,20 +8,7 @@ export default function AuthLayout({
 }) {
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="p-4 border-b">
-        <div className="container mx-auto">
-          <Link href="/" className="flex items-center gap-2">
-            <Image 
-              src="/logo.png" 
-              alt="BrandConnect Logo" 
-              width={32} 
-              height={32} 
-              className="w-8 h-8"
-            />
-            <span className="font-bold text-xl">BrandConnect</span>
-          </Link>
-        </div>
-      </header>
+      <Header/>
 
       <main className="flex-1 flex">
         <div className="flex-1 flex items-center justify-center">
