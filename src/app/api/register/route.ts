@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { hash } from "bcrypt";
 import { db } from "@/lib/db";
-import { UserRole } from "@/lib/constants";
+import { UserRole, ApprovalStatus } from "@/lib/constants";
 
 export async function POST(req: Request) {
   try {
@@ -49,15 +49,24 @@ export async function POST(req: Request) {
         data: {
           userId: user.id,
           nickname: name, // Usamos el nombre como nickname por defecto
+          approvalStatus: ApprovalStatus.PENDING, // Por defecto está pendiente de aprobación
         },
       });
+      
+      // TODO: Aquí podríamos enviar un correo al administrador para notificarle de la nueva solicitud
+      // utilizando la biblioteca Resend que ya tienes en tus dependencias
     }
 
     // Devolver el usuario sin la contraseña
     const { password: _, ...userWithoutPassword } = user;
     
     return NextResponse.json(
-      { user: userWithoutPassword, message: "Usuario registrado correctamente" },
+      { 
+        user: userWithoutPassword, 
+        message: role === UserRole.INFLUENCER 
+          ? "Usuario registrado correctamente. Tu cuenta será revisada por nuestro equipo." 
+          : "Usuario registrado correctamente"
+      },
       { status: 201 }
     );
   } catch (error) {
