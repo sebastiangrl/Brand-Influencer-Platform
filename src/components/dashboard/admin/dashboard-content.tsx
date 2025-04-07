@@ -5,24 +5,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { ApprovalStatus } from "@/lib/constants";
-import { CheckCircle, XCircle, Search, Filter, Plus } from "lucide-react";
-
-// Definición de tipos para las solicitudes de influencers
-interface InfluencerProfile {
-  id: string;
-  userId: string;
-  nickname: string;
-  bio: string | null;
-  approvalStatus: ApprovalStatus;
-  approvedAt: Date | null;
-  rejectionReason: string | null;
-  user: {
-    id: string;
-    name: string | null;
-    email: string;
-    createdAt: Date;
-  };
-}
+import { Search, Filter, Plus } from "lucide-react";
+import InfluencerTable from "@/components/dashboard/admin/influencer-table";
+import InfluencerDetailsModal from "./influencer-details-modal";
+import WaitingListModal from "@/components/dashboard/admin/waiting-list-modal";
+import { InfluencerProfile } from "@/types/influencer";
 
 interface AdminDashboardContentProps {
   initialRequests: InfluencerProfile[];
@@ -31,10 +18,12 @@ interface AdminDashboardContentProps {
 export default function AdminDashboardContent({ initialRequests }: AdminDashboardContentProps) {
   const [requests, setRequests] = useState<InfluencerProfile[]>(initialRequests);
   const [activeRequest, setActiveRequest] = useState<InfluencerProfile | null>(null);
-  const [rejectionReason, setRejectionReason] = useState("");
+  const [waitingListReason, setWaitingListReason] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("pendientes");
+  const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
 
   // Filtrar solicitudes por estado
@@ -44,7 +33,7 @@ export default function AdminDashboardContent({ initialRequests }: AdminDashboar
   const approvedRequests = requests.filter(
     (req) => req.approvalStatus === ApprovalStatus.APPROVED
   );
-  const rejectedRequests = requests.filter(
+  const waitingListRequests = requests.filter(
     (req) => req.approvalStatus === ApprovalStatus.REJECTED
   );
 
@@ -80,33 +69,39 @@ export default function AdminDashboardContent({ initialRequests }: AdminDashboar
     }
   };
 
-  // Abrir modal de rechazo
-  const openRejectModal = (request: InfluencerProfile) => {
+  // Ver detalles del influencer
+  const viewDetails = (request: InfluencerProfile) => {
     setActiveRequest(request);
-    setRejectionReason("");
+    setIsDetailsModalOpen(true);
+  };
+
+  // Abrir modal de lista de espera
+  const openWaitingListModal = (request: InfluencerProfile) => {
+    setActiveRequest(request);
+    setWaitingListReason("");
     setIsModalOpen(true);
   };
 
-  // Manejar el rechazo de un influencer
-  const handleReject = async () => {
+  // Manejar el envío a lista de espera
+  const handleAddToWaitingList = async () => {
     if (!activeRequest) return;
 
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/admin/influencers/${activeRequest.id}/reject`, {
+      const response = await fetch(`/api/admin/influencers/${activeRequest.id}/waiting-list`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ reason: rejectionReason }),
+        body: JSON.stringify({ reason: waitingListReason }),
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.message || "Error al rechazar la solicitud");
+        throw new Error(data.message || "Error al añadir a la lista de espera");
       }
 
-      toast.success("Solicitud rechazada correctamente");
+      toast.success("Influencer añadido a la lista de espera correctamente");
       
       // Actualizar la lista de solicitudes
       setRequests(
@@ -115,7 +110,7 @@ export default function AdminDashboardContent({ initialRequests }: AdminDashboar
             ? { 
                 ...req, 
                 approvalStatus: ApprovalStatus.REJECTED,
-                rejectionReason
+                rejectionReason: waitingListReason
               }
             : req
         )
@@ -130,109 +125,46 @@ export default function AdminDashboardContent({ initialRequests }: AdminDashboar
     }
   };
 
-  // Renderizar tabla de solicitudes
-  const renderRequestsTable = (requests: InfluencerProfile[]) => {
-    if (requests.length === 0) {
-      return (
-        <div className="bg-white border border-gray-200 p-8 text-center text-gray-500 rounded-lg">
-          No hay solicitudes {activeTab}
-        </div>
+  // Determinar qué solicitudes mostrar basado en la tab activa y búsqueda
+  const getActiveRequests = () => {
+    let filteredRequests;
+    
+    switch (activeTab) {
+      case "pendientes":
+        filteredRequests = pendingRequests;
+        break;
+      case "aprobadas":
+        filteredRequests = approvedRequests;
+        break;
+      case "listaespera":
+        filteredRequests = waitingListRequests;
+        break;
+      default:
+        filteredRequests = pendingRequests;
+    }
+
+    // Aplicar filtro de búsqueda si existe
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      return filteredRequests.filter(req => 
+        req.nickname?.toLowerCase().includes(query) || 
+        req.user.name?.toLowerCase().includes(query) || 
+        req.user.email.toLowerCase().includes(query) ||
+        req.instagramUsername?.toLowerCase().includes(query) ||
+        req.tiktokUsername?.toLowerCase().includes(query) ||
+        req.niche?.toLowerCase().includes(query)
       );
     }
 
-    return (
-      <div className="overflow-hidden bg-white rounded-lg border border-gray-200">
-        <table className="w-full">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Nombre
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Email
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Fecha de Solicitud
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {requests.map((request) => (
-              <tr key={request.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="font-medium text-gray-900">
-                    {request.nickname || request.user.name}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {request.user.email}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {new Date(request.user.createdAt).toLocaleDateString()}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  {request.approvalStatus === ApprovalStatus.PENDING && (
-                    <div className="flex justify-end space-x-2">
-                      <button
-                        onClick={() => handleApprove(request.id)}
-                        disabled={isLoading}
-                        className="inline-flex items-center px-3 py-1.5 bg-green-50 text-green-700 rounded-md hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
-                      >
-                        <CheckCircle className="w-4 h-4 mr-1.5" />
-                        Aprobar
-                      </button>
-                      <button
-                        onClick={() => openRejectModal(request)}
-                        disabled={isLoading}
-                        className="inline-flex items-center px-3 py-1.5 bg-red-50 text-red-700 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
-                      >
-                        <XCircle className="w-4 h-4 mr-1.5" />
-                        Rechazar
-                      </button>
-                    </div>
-                  )}
-                  {request.approvalStatus === ApprovalStatus.REJECTED && (
-                    <span className="inline-block px-4 py-2 text-sm text-red-600 bg-red-50 rounded-md">
-                      Rechazado: {request.rejectionReason || "No especificado"}
-                    </span>
-                  )}
-                  {request.approvalStatus === ApprovalStatus.APPROVED && (
-                    <span className="inline-block px-4 py-2 text-sm text-green-600 bg-green-50 rounded-md">
-                      Aprobado: {request.approvedAt ? new Date(request.approvedAt).toLocaleDateString() : ''}
-                    </span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  };
-
-  // Determinar qué solicitudes mostrar basado en la tab activa
-  const getActiveRequests = () => {
-    switch (activeTab) {
-      case "pendientes":
-        return pendingRequests;
-      case "aprobadas":
-        return approvedRequests;
-      case "rechazadas":
-        return rejectedRequests;
-      default:
-        return pendingRequests;
-    }
+    return filteredRequests;
   };
 
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold">Gestión de Solicitudes</h2>
-          <p className="text-gray-600 mt-1">Administra las solicitudes de influencers</p>
+          <h2 className="text-xl font-semibold">Gestión de Influencers</h2>
+          <p className="text-gray-600 mt-1">Administra las solicitudes y perfiles de influencers</p>
         </div>
         
         {/* Tabs de navegación */}
@@ -259,14 +191,14 @@ export default function AdminDashboardContent({ initialRequests }: AdminDashboar
               Aprobadas {approvedRequests.length > 0 && `(${approvedRequests.length})`}
             </button>
             <button
-              onClick={() => setActiveTab("rechazadas")}
+              onClick={() => setActiveTab("listaespera")}
               className={`px-4 py-3 text-sm font-medium border-b-2 ${
-                activeTab === "rechazadas"
+                activeTab === "listaespera"
                   ? "border-blue-600 text-blue-700"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
-              Rechazadas {rejectedRequests.length > 0 && `(${rejectedRequests.length})`}
+              Lista de espera {waitingListRequests.length > 0 && `(${waitingListRequests.length})`}
             </button>
           </nav>
         </div>
@@ -279,7 +211,9 @@ export default function AdminDashboardContent({ initialRequests }: AdminDashboar
             </div>
             <input
               type="text"
-              placeholder="Buscar solicitudes..."
+              placeholder="Buscar influencers..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="block w-full sm:w-64 pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             />
           </div>
@@ -290,57 +224,49 @@ export default function AdminDashboardContent({ initialRequests }: AdminDashboar
             </button>
             <button className="inline-flex items-center px-3 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
               <Plus className="h-4 w-4 mr-2" />
-              Nueva solicitud
+              Añadir manualmente
             </button>
           </div>
         </div>
         
         {/* Tabla de solicitudes */}
         <div className="px-6 py-4">
-          {renderRequestsTable(getActiveRequests())}
+          <InfluencerTable 
+            requests={getActiveRequests()} 
+            activeTab={activeTab}
+            isLoading={isLoading}
+            onViewDetails={viewDetails}
+            onApprove={handleApprove}
+            onAddToWaitingList={openWaitingListModal}
+          />
         </div>
       </div>
 
-      {/* Modal de rechazo */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">Rechazar Solicitud</h3>
-            <p className="text-gray-600 mb-4">
-              ¿Estás seguro de que deseas rechazar la solicitud de{" "}
-              <span className="font-semibold text-gray-900">
-                {activeRequest?.nickname || activeRequest?.user.name}
-              </span>?
-            </p>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Motivo del rechazo (opcional)
-              </label>
-              <textarea
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                rows={3}
-                placeholder="Explica la razón del rechazo..."
-              />
-            </div>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleReject}
-                disabled={isLoading}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
-              >
-                {isLoading ? "Procesando..." : "Rechazar"}
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Modal de detalles */}
+      {isDetailsModalOpen && activeRequest && (
+        <InfluencerDetailsModal
+          influencer={activeRequest}
+          isOpen={isDetailsModalOpen}
+          onClose={() => setIsDetailsModalOpen(false)}
+          onApprove={handleApprove}
+          onAddToWaitingList={() => {
+            setIsDetailsModalOpen(false);
+            openWaitingListModal(activeRequest);
+          }}
+        />
+      )}
+
+      {/* Modal lista de espera */}
+      {isModalOpen && activeRequest && (
+        <WaitingListModal 
+          influencer={activeRequest}
+          isOpen={isModalOpen}
+          isLoading={isLoading}
+          reason={waitingListReason}
+          onReasonChange={setWaitingListReason}
+          onClose={() => setIsModalOpen(false)}
+          onConfirm={handleAddToWaitingList}
+        />
       )}
     </div>
   );

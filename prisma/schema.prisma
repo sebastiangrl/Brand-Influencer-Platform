@@ -105,6 +105,7 @@ model BrandProfile {
   description   String?
   industry      String?
   location      String?
+  contactPhone  String?         // Nuevo campo para teléfono de contacto
   subscription  SubscriptionPlan @default(FREE)
   subscriptionId String?
   subscriptionStartDate DateTime?
@@ -119,12 +120,27 @@ model InfluencerProfile {
   userId            String          @unique
   nickname          String?
   bio               String?
-  categories        String[]
-  instagramUrl      String?
-  tiktokUrl         String?
+  
+  // Campos actualizados para redes sociales
+  instagramUsername String?         // Nuevo: username de Instagram
+  instagramFollowers Int?           // Nuevo: número de seguidores en Instagram
+  instagramUrl      String?         // Mantener para compatibilidad
+  
+  tiktokUsername    String?         // Nuevo: username de TikTok
+  tiktokFollowers   Int?            // Nuevo: número de seguidores en TikTok
+  tiktokUrl         String?         // Mantener para compatibilidad
+  
   youtubeUrl        String?
   facebookUrl       String?
   twitterUrl        String?
+  
+  // Información de contacto
+  whatsappContact   String?         // Nuevo: contacto de WhatsApp
+  
+  // Campos de nicho y categoría
+  niche             String?         // Nuevo: nicho principal
+  categories        String[]        // Mantener para categorías múltiples
+  
   audienceSize      Int?
   approvalStatus    ApprovalStatus  @default(PENDING)
   approvedAt        DateTime?
