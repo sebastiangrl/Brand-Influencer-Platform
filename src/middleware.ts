@@ -1,15 +1,27 @@
+// src/middleware.ts
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 import { ApprovalStatus, UserRole } from "./lib/constants";
 
 export async function middleware(req: NextRequest) {
-  // No procesar rutas de API de autenticación ni rutas estáticas
-  if (
-    req.nextUrl.pathname.startsWith('/api/auth') || 
-    req.nextUrl.pathname.startsWith('/_next') ||
-    req.nextUrl.pathname.includes('.') ||
-    req.nextUrl.pathname === '/favicon.ico'
-  ) {
+  // Rutas a excluir completamente del middleware
+  const excludedPaths = [
+    '/api/auth',
+    '/api/register',
+    '/_next',
+    '/favicon.ico'
+  ];
+  
+  // No procesar rutas excluidas ni rutas estáticas
+  for (const path of excludedPaths) {
+    if (req.nextUrl.pathname.startsWith(path)) {
+      console.log(`Middleware: Excluyendo ruta ${req.nextUrl.pathname}`);
+      return NextResponse.next();
+    }
+  }
+  
+  // No procesar archivos estáticos
+  if (req.nextUrl.pathname.includes('.')) {
     return NextResponse.next();
   }
   
@@ -29,12 +41,58 @@ export async function middleware(req: NextRequest) {
   const isPublicRoute = publicRoutes.some(route => path.startsWith(route));
 
   // Lista de rutas de marketing
-  const marketingRoutes = ["/", "/about", "/pricing", "/contact", "/features", "/terms", "/privacy"];
+  const marketingRoutes = ["/about", "/pricing", "/contact", "/features", "/terms", "/privacy"];
   const isMarketingRoute = marketingRoutes.some(route => path === route);
 
   // Rutas de influencers pendientes o rechazados
   const pendingRoutes = ["/onboarding/influencer/pending-approval", "/onboarding/influencer/rejected"];
   const isPendingRoute = pendingRoutes.some(route => path === route);
+
+  // Manejo especial para la ruta principal "/"
+  if (path === "/") {
+    // Si el usuario está autenticado, verificamos si ya completó su onboarding
+    if (isAuthenticated && token) {
+      // Para usuarios INFLUENCER, debemos verificar su estado de aprobación
+      if (token.role === UserRole.INFLUENCER) {
+        try {
+          const response = await fetch(`${req.nextUrl.origin}/api/influencer/status?userId=${token.id}`, {
+            headers: {
+              'Cookie': req.headers.get('cookie') || '',
+            },
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            
+            if (data.status === ApprovalStatus.PENDING) {
+              return NextResponse.redirect(new URL("/onboarding/influencer/pending-approval", req.url));
+            }
+            
+            if (data.status === ApprovalStatus.REJECTED) {
+              return NextResponse.redirect(new URL("/onboarding/influencer/rejected", req.url));
+            }
+          }
+        } catch (error) {
+          console.error("Error al verificar estado del influencer:", error);
+          // En caso de error, continuamos para no bloquear la navegación
+        }
+      }
+      
+      // Si todo está bien, redirigimos al dashboard según el rol
+      if (token.role === UserRole.ADMIN) {
+        return NextResponse.redirect(new URL("/dashboard/admin", req.url));
+      }
+      if (token.role === UserRole.BRAND) {
+        return NextResponse.redirect(new URL("/dashboard/brand", req.url));
+      }
+      if (token.role === UserRole.INFLUENCER) {
+        return NextResponse.redirect(new URL("/dashboard/influencer", req.url));
+      }
+    }
+    
+    // Si no está autenticado o no tiene un rol reconocido, mostramos la landing normalmente
+    return NextResponse.next();
+  }
 
   // Si es una ruta pública, de marketing o de pending/rejected, permitir acceso sin restricción
   if (isPublicRoute || isMarketingRoute || isPendingRoute) {

@@ -1,10 +1,12 @@
+// lib/auth.ts
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { compare } from "bcrypt";
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
 
 import { db } from "@/lib/db";
-import { UserRole, ApprovalStatus } from "./constants";
+import { UserRole, ApprovalStatus } from "@/lib/constants";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db),
@@ -20,6 +22,10 @@ export const authOptions: NextAuthOptions = {
     error: "/auth/error",
   },
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID || "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+    }),
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -49,12 +55,12 @@ export const authOptions: NextAuthOptions = {
         }
 
         // Verificar si el usuario es un influencer y su estado de aprobación
-        if (user.role === UserRole.INFLUENCER && user.influencerProfile) {
-          if (user.influencerProfile.approvalStatus === ApprovalStatus.PENDING) {
+        if (user.role === "INFLUENCER" && user.influencerProfile) {
+          if (user.influencerProfile.approvalStatus === "PENDING") {
             throw new Error("Tu cuenta está pendiente de aprobación. Te notificaremos cuando sea aprobada.");
           }
           
-          if (user.influencerProfile.approvalStatus === ApprovalStatus.REJECTED) {
+          if (user.influencerProfile.approvalStatus === "REJECTED") {
             throw new Error(`Tu solicitud fue rechazada. Motivo: ${user.influencerProfile.rejectionReason || "No especificado"}`);
           }
         }
@@ -63,7 +69,7 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           name: user.name,
           email: user.email,
-          role: user.role,
+          role: user.role as UserRole,
           image: user.image,
         };
       },
@@ -95,15 +101,6 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
   },
-  cookies: {
-    sessionToken: {
-      name: `next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-      },
-    },
-  },
+  secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV === "development",
 };

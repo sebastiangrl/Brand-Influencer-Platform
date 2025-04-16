@@ -1,3 +1,4 @@
+//types/next-auth.d.ts
 import { UserRole } from "@/lib/constants";
 import NextAuth from "next-auth";
 

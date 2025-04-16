@@ -3,6 +3,8 @@
 import { ApprovalStatus } from "@/lib/constants";
 
 export interface InfluencerProfile {
+  coverImage: any;
+  profileImage: any;
   id: string;
   userId: string;
   nickname: string;

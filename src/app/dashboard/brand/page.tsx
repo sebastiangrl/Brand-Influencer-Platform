@@ -1,41 +1,58 @@
 // app/dashboard/brand/page.tsx
-"use client";
+import { db } from "@/lib/db";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import BrandDashboard from "@/components/dashboard/brand/brand-dashboard";
+import { BrandProfile } from "@/types/brand";
+import { UserRole } from "@/lib/constants";
 
-import { useSession } from "next-auth/react";
+export const dynamic = "force-dynamic";
 
-export default function BrandDashboard() {
-  const { data: session } = useSession();
+async function getBrandProfile(userId: string) {
+  try {
+    const brandProfile = await db.brandProfile.findFirst({
+      where: {
+        userId: userId,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            createdAt: true,
+            role: true,
+          },
+        },
+      },
+    });
 
-  return (
-    <div className="max-w-7xl mx-auto p-8">
-      <h1 className="text-3xl font-bold mb-6">Dashboard de Marca</h1>
-      
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <h2 className="text-xl font-semibold mb-4">
-          Bienvenido, {session?.user?.name || "Usuario"}
-        </h2>
-        
-        <p className="mb-4">
-          Desde aquí podrás gestionar tus campañas y conectar con influencers.
-        </p>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-          <div className="bg-blue-50 p-4 rounded border border-blue-100">
-            <h3 className="font-medium text-blue-800">Campañas activas</h3>
-            <p className="text-2xl font-bold">0</p>
-          </div>
-          
-          <div className="bg-green-50 p-4 rounded border border-green-100">
-            <h3 className="font-medium text-green-800">Influencers contactados</h3>
-            <p className="text-2xl font-bold">0</p>
-          </div>
-          
-          <div className="bg-purple-50 p-4 rounded border border-purple-100">
-            <h3 className="font-medium text-purple-800">Mensajes sin leer</h3>
-            <p className="text-2xl font-bold">0</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+    return brandProfile as unknown as BrandProfile;
+  } catch (error) {
+    console.error("Error fetching brand profile:", error);
+    return null;
+  }
+}
+
+export default async function BrandDashboardPage() {
+  const session = await getServerSession(authOptions);
+
+  if (!session || !session.user) {
+    return redirect("/login");
+  }
+
+  // Verificar si el usuario es una marca
+  if (session.user.role !== UserRole.BRAND) {
+    return redirect("/dashboard");
+  }
+
+  const brandProfile = await getBrandProfile(session.user.id);
+
+  if (!brandProfile) {
+    // Si no existe un perfil, redirigir a la página de creación de perfil
+    return redirect("/dashboard/brand/create-profile");
+  }
+
+  return <BrandDashboard brand={brandProfile} />;
 }

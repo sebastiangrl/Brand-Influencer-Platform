@@ -167,6 +167,8 @@ export function RegisterForm() {
       setIsLoading(true);
       setError(null);
 
+      console.log("Enviando datos de influencer:", JSON.stringify(data, null, 2));
+
       const response = await fetch("/api/register/influencer", {
         method: "POST",
         headers: {
@@ -175,14 +177,17 @@ export function RegisterForm() {
         body: JSON.stringify(data),
       });
 
+      const responseData = await response.json();
+      console.log("Respuesta del servidor:", JSON.stringify(responseData, null, 2));
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Error al registrarse");
+        throw new Error(responseData.message || "Error al registrarse");
       }
 
       // Redirigir al onboarding
       router.push("/onboarding/influencer");
     } catch (error: any) {
+      console.error("Error al registrar influencer:", error);
       setError(error.message);
     } finally {
       setIsLoading(false);
@@ -195,6 +200,8 @@ export function RegisterForm() {
       setIsLoading(true);
       setError(null);
 
+      console.log("Enviando datos de marca:", JSON.stringify(data, null, 2));
+
       const response = await fetch("/api/register/brand", {
         method: "POST",
         headers: {
@@ -203,14 +210,17 @@ export function RegisterForm() {
         body: JSON.stringify(data),
       });
 
+      const responseData = await response.json();
+      console.log("Respuesta del servidor:", JSON.stringify(responseData, null, 2));
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Error al registrarse");
+        throw new Error(responseData.message || "Error al registrarse");
       }
 
       // Redirigir al onboarding
       router.push("/onboarding/brand");
     } catch (error: any) {
+      console.error("Error al registrar marca:", error);
       setError(error.message);
     } finally {
       setIsLoading(false);
