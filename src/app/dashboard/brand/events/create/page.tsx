@@ -3,13 +3,13 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { UserRole } from "@/lib/constants";
-import CreateEventForm from "@/components/dashboard/brand/events/create-event-form";
+import EventForm from "@/components/dashboard/brand/events/event-form";
 
 export default async function CreateEventPage() {
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user) {
-    return redirect("/login");
+    return redirect("/auth/login?callbackUrl=/dashboard/brand/events/create");
   }
 
   // Verificar si el usuario es una marca
@@ -17,7 +17,6 @@ export default async function CreateEventPage() {
     return redirect("/dashboard");
   }
 
-  // Verificar si la marca tiene un perfil (se asume que esta verificación ya se realizó en la ruta padre)
-
-  return <CreateEventForm />;
+  // Aquí simplemente pasamos el componente sin propiedades necesarias
+  return <EventForm />;
 }

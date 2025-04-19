@@ -1,4 +1,4 @@
-// dashboard/brand/layout.tsx
+//src/app/dashboard/brand/layout.tsx
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { UserRole } from "@/lib/constants";
@@ -10,6 +10,7 @@ import { db } from "@/lib/db";
 import BrandSidebar from "@/components/dashboard/brand/brand-sidebar";
 import BrandNav from "@/components/dashboard/brand/brand-nav";
 import { Progress } from "@/components/ui/progress";
+import { BrandProfile } from "@/types/brand";
 
 export default async function BrandDashboardLayout({
   children,
@@ -36,15 +37,48 @@ export default async function BrandDashboardLayout({
 
   try {
     // Verificar si la marca tiene un perfil
-    const brandProfile = await db.brandProfile.findUnique({
+    const brandProfileData = await db.brandProfile.findUnique({
       where: { userId: session.user.id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+            createdAt: true,
+            role: true
+          }
+        }
+      }
     });
 
     // Si no tiene perfil, redirigir a crear uno
-    if (!brandProfile) {
+    if (!brandProfileData) {
       console.log("Redirigiendo a setup de perfil: La marca no tiene perfil");
-      redirect("/dashboard/brand/profile?setup=true");
+      redirect("/dashboard/brand/create-profile");
     }
+
+    // Convertir a tipo BrandProfile
+    const brandProfile: BrandProfile = {
+      id: brandProfileData.id,
+      userId: brandProfileData.userId,
+      companyName: brandProfileData.companyName,
+      website: brandProfileData.website,
+      logo: brandProfileData.logo,
+      description: brandProfileData.description,
+      industry: brandProfileData.industry,
+      location: brandProfileData.location,
+      contactPhone: brandProfileData.contactPhone,
+      user: {
+        id: brandProfileData.user.id,
+        name: brandProfileData.user.name,
+        email: brandProfileData.user.email,
+        image: brandProfileData.user.image,
+        createdAt: brandProfileData.user.createdAt,
+        role: brandProfileData.user.role
+      }
+    };
 
     return (
       <div className="flex h-screen bg-gray-100">

@@ -47,11 +47,13 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { toast } from "react-toastify";
 import { EventStatus } from "@/lib/constants";
-import BrandNavigation from "@/components/dashboard/brand/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Event, EventInterest } from "@/types/brand";
 
 interface EventDetailProps {
-  event: any; // Usar tipo específico cuando esté disponible
+  event: Event & {
+    interests: EventInterest[];
+  };
 }
 
 export default function EventDetail({ event }: EventDetailProps) {
@@ -140,22 +142,21 @@ export default function EventDetail({ event }: EventDetailProps) {
     }
   };
 
-  const formatDate = (date: string | null) => {
+  const formatDate = (date: string | Date | null) => {
     if (!date) return "No definida";
     return new Date(date).toLocaleDateString();
   };
 
   const getPendingApplications = () => {
-    return event.interests.filter((interest: any) => !interest.approved);
+    return event.interests.filter((interest) => !interest.approved);
   };
 
   const getApprovedApplications = () => {
-    return event.interests.filter((interest: any) => interest.approved);
+    return event.interests.filter((interest) => interest.approved);
   };
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <BrandNavigation />
       <div className="flex-1 p-8">
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -355,16 +356,20 @@ export default function EventDetail({ event }: EventDetailProps) {
                           </div>
                         ) : (
                           <div className="space-y-4">
-                            {getPendingApplications().map((interest: any) => (
+                            {getPendingApplications().map((interest) => (
                               <div 
                                 key={interest.id} 
                                 className="flex flex-col justify-between rounded-lg border border-gray-200 p-4 transition-all hover:border-gray-300 sm:flex-row sm:items-center"
                               >
                                 <div className="flex items-center gap-3">
                                   <Avatar className="h-10 w-10 border">
-                                  <AvatarImage src={interest.influencer.user?.image || ""} alt={interest.influencer.nickname || "Influencer"} />
+                                    <AvatarImage 
+                                      src={interest.influencer.user?.image || ""} 
+                                      alt={interest.influencer.nickname || "Influencer"} 
+                                    />
                                     <AvatarFallback>
-                                      {interest.influencer.nickname?.charAt(0) || interest.influencer.user.name?.charAt(0) || "?"}
+                                      {interest.influencer.nickname?.charAt(0) || 
+                                       interest.influencer.user.name?.charAt(0) || "?"}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div>
@@ -451,16 +456,20 @@ export default function EventDetail({ event }: EventDetailProps) {
                           </div>
                         ) : (
                           <div className="space-y-4">
-                            {getApprovedApplications().map((interest: any) => (
+                            {getApprovedApplications().map((interest) => (
                               <div 
                                 key={interest.id} 
                                 className="flex flex-col justify-between rounded-lg border border-green-100 bg-green-50 p-4 transition-all sm:flex-row sm:items-center"
                               >
                                 <div className="flex items-center gap-3">
                                   <Avatar className="h-10 w-10 border">
-                                    <AvatarImage src={interest.influencer.user?.image || ""} alt={interest.influencer.nickname || "Influencer"} />
+                                    <AvatarImage 
+                                      src={interest.influencer.user?.image || ""} 
+                                      alt={interest.influencer.nickname || "Influencer"} 
+                                    />
                                     <AvatarFallback>
-                                      {interest.influencer.nickname?.charAt(0) || interest.influencer.user.name?.charAt(0) || "?"}
+                                      {interest.influencer.nickname?.charAt(0) || 
+                                       interest.influencer.user.name?.charAt(0) || "?"}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div>

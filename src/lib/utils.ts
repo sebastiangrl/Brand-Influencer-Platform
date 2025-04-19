@@ -1,8 +1,11 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
+/**
+ * Combine multiple class names using clsx and tailwind-merge
+ */
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
 
@@ -38,4 +41,25 @@ export function cleanPhoneNumber(phone: string | null): string {
   if (!phone) return "";
   
   return phone.replace(/[+\s-]/g, '');
+}
+
+/**
+ * Get the initials from a name
+ */
+export function getInitials(name: string): string {
+  if (!name) return "";
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase();
+}
+
+/**
+ * Truncate a string to a maximum length and add ellipsis if needed
+ */
+export function truncateString(str: string, maxLength: number): string {
+  if (!str) return "";
+  if (str.length <= maxLength) return str;
+  return str.substring(0, maxLength) + "...";
 }

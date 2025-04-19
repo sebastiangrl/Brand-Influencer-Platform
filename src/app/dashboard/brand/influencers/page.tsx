@@ -1,18 +1,18 @@
 // app/dashboard/brand/influencers/page.tsx
-import { db } from "@/lib/db";
+import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { redirect } from "next/navigation";
-import { UserRole, ApprovalStatus } from "@/lib/constants";
+import { db } from "@/lib/db";
+import { UserRole } from "@/lib/constants";
 import InfluencerList from "@/components/dashboard/brand/influencers/influencer-list";
 
 export const dynamic = "force-dynamic";
 
-async function getApprovedInfluencers() {
+async function getInfluencers() {
   try {
     const influencers = await db.influencerProfile.findMany({
       where: {
-        approvalStatus: ApprovalStatus.APPROVED,
+        approvalStatus: "APPROVED", // Solo influencers aprobados
       },
       include: {
         user: {
@@ -20,13 +20,14 @@ async function getApprovedInfluencers() {
             id: true,
             name: true,
             email: true,
-            role: true,
+            image: true,
           },
         },
       },
       orderBy: {
-        instagramFollowers: "desc",
+        audienceSize: "desc", // Ordenar por tamaño de audiencia
       },
+      take: 50, // Limitar a 50 influencers por carga
     });
 
     return influencers;
@@ -36,11 +37,11 @@ async function getApprovedInfluencers() {
   }
 }
 
-export default async function BrandInfluencersPage() {
+export default async function InfluencersPage() {
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user) {
-    return redirect("/login");
+    return redirect("/auth/login?callbackUrl=/dashboard/brand/influencers");
   }
 
   // Verificar si el usuario es una marca
@@ -48,8 +49,8 @@ export default async function BrandInfluencersPage() {
     return redirect("/dashboard");
   }
 
-  const influencers = await getApprovedInfluencers();
-  
+  const influencers = await getInfluencers();
+
   return (
     <div className="container mx-auto p-6">
       <InfluencerList initialInfluencers={influencers} />

@@ -1,10 +1,11 @@
-// app/dashboard/brand/events/[eventId]/page.tsx
-import { notFound, redirect } from "next/navigation";
+//src/app/dashboard/brand/events/[eventId]/page.tsx
+import { db } from "@/lib/db";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { notFound, redirect } from "next/navigation";
 import { UserRole } from "@/lib/constants";
 import EventDetail from "@/components/dashboard/brand/events/event-detail";
+import { Event, EventInterest } from "@/types/brand";
 
 interface EventPageProps {
   params: {
@@ -14,12 +15,42 @@ interface EventPageProps {
 
 export const dynamic = "force-dynamic";
 
-async function getEvent(eventId: string, userId: string) {
+async function getEventWithInterests(eventId: string, userId: string) {
   try {
     const event = await db.event.findUnique({
       where: {
         id: eventId,
-        createdById: userId, // Asegurar que el evento pertenece a esta marca
+        createdById: userId, // Asegura que el evento pertenece a esta marca
+      },
+      include: {
+        interests: {
+          include: {
+            influencer: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    image: true,
+                    createdAt: true,
+                    role: true,
+                  },
+                },
+              },
+            },
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                image: true,
+                createdAt: true,
+                role: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -30,43 +61,11 @@ async function getEvent(eventId: string, userId: string) {
   }
 }
 
-async function getEventInterests(eventId: string) {
-  try {
-    const interests = await db.eventInterest.findMany({
-      where: {
-        eventId,
-      },
-      include: {
-        influencer: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                image: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-
-    return interests;
-  } catch (error) {
-    console.error("Error fetching event interests:", error);
-    return [];
-  }
-}
-
 export default async function EventPage({ params }: EventPageProps) {
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user) {
-    return redirect("/auth/login?callbackUrl=/dashboard/brand/events");
+    return redirect(`/auth/login?callbackUrl=/dashboard/brand/events/${params.eventId}`);
   }
 
   // Verificar si el usuario es una marca
@@ -74,18 +73,17 @@ export default async function EventPage({ params }: EventPageProps) {
     return redirect("/dashboard");
   }
 
-  const { eventId } = params;
-  const event = await getEvent(eventId, session.user.id);
+  const eventData = await getEventWithInterests(params.eventId, session.user.id);
 
-  if (!event) {
+  if (!eventData) {
     return notFound();
   }
 
-  const interests = await getEventInterests(eventId);
+  // Convertir el resultado de Prisma al formato que espera nuestro componente
+  const event: Event & { interests: EventInterest[] } = {
+    ...eventData,
+    interests: eventData.interests as EventInterest[]
+  };
 
-  return (
-    <div className="container mx-auto p-6">
-      <EventDetail event={event} interests={interests} />
-    </div>
-  );
+  return <EventDetail event={event} />;
 }

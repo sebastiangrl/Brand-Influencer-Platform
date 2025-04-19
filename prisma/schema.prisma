@@ -17,13 +17,6 @@ enum UserRole {
   INFLUENCER
 }
 
-enum SubscriptionPlan {
-  FREE
-  BASIC
-  PREMIUM
-  ENTERPRISE
-}
-
 enum ApprovalStatus {
   PENDING
   APPROVED
@@ -105,11 +98,7 @@ model BrandProfile {
   description   String?
   industry      String?
   location      String?
-  contactPhone  String?         // Nuevo campo para teléfono de contacto
-  subscription  SubscriptionPlan @default(FREE)
-  subscriptionId String?
-  subscriptionStartDate DateTime?
-  subscriptionEndDate   DateTime?
+  contactPhone  String?         // Teléfono de contacto
   
   // Relations
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -121,25 +110,25 @@ model InfluencerProfile {
   nickname          String?
   bio               String?
   
-  // Campos actualizados para redes sociales
-  instagramUsername String?         // Nuevo: username de Instagram
-  instagramFollowers Int?           // Nuevo: número de seguidores en Instagram
-  instagramUrl      String?         // Mantener para compatibilidad
+  // Campos para redes sociales
+  instagramUsername String?         // Username de Instagram
+  instagramFollowers Int?           // Número de seguidores en Instagram
+  instagramUrl      String?         // URL de Instagram
   
-  tiktokUsername    String?         // Nuevo: username de TikTok
-  tiktokFollowers   Int?            // Nuevo: número de seguidores en TikTok
-  tiktokUrl         String?         // Mantener para compatibilidad
+  tiktokUsername    String?         // Username de TikTok
+  tiktokFollowers   Int?            // Número de seguidores en TikTok
+  tiktokUrl         String?         // URL de TikTok
   
   youtubeUrl        String?
   facebookUrl       String?
   twitterUrl        String?
   
   // Información de contacto
-  whatsappContact   String?         // Nuevo: contacto de WhatsApp
+  whatsappContact   String?         // Contacto de WhatsApp
   
   // Campos de nicho y categoría
-  niche             String?         // Nuevo: nicho principal
-  categories        String[]        // Mantener para categorías múltiples
+  niche             String?         // Nicho principal
+  categories        String[]        // Categorías múltiples
   
   audienceSize      Int?
   approvalStatus    ApprovalStatus  @default(PENDING)
@@ -203,13 +192,4 @@ model Message {
   // Relations
   sender          User      @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
   receiver        User      @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
-}
-
-model Subscription {
-  id              String    @id @default(cuid())
-  name            SubscriptionPlan
-  price           Float
-  description     String
-  features        String[]
-  active          Boolean   @default(true)
 }

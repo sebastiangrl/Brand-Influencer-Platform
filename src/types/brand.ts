@@ -1,13 +1,13 @@
 // types/brand.ts
-import { SubscriptionPlan, UserRole } from "@/lib/constants";
+import { UserRole, EventStatus, ApprovalStatus } from "@/lib/constants";
 
 export interface User {
-  image: string;
   id: string;
   name: string | null;
   email: string;
+  image: string | null;
   createdAt: Date;
-  role: UserRole;
+  role: UserRole | string;
 }
 
 export interface BrandProfile {
@@ -20,10 +20,6 @@ export interface BrandProfile {
   industry: string | null;
   location: string | null;
   contactPhone: string | null;
-  subscription: SubscriptionPlan;
-  subscriptionId: string | null;
-  subscriptionStartDate: Date | null;
-  subscriptionEndDate: Date | null;
   user: User;
 }
 
@@ -38,7 +34,7 @@ export interface Event {
   startDate: Date | null;
   endDate: Date | null;
   location: string | null;
-  status: string;
+  status: EventStatus | string;
   maxInfluencers: number | null;
   minFollowers: number | null;
   categories: string[];
@@ -68,10 +64,16 @@ export interface Influencer {
   niche: string | null;
   categories: string[];
   audienceSize: number | null;
-  approvalStatus: string;
-  user: User;
+  approvalStatus: ApprovalStatus | string;
+  user: User | {
+    id: string;
+    name: string | null;
+    email: string;
+    image: string | null;
+  };
 }
 
+// Actualizamos la interfaz EventInterest para que coincida con lo que devuelve Prisma
 export interface EventInterest {
   id: string;
   eventId: string;
@@ -81,4 +83,10 @@ export interface EventInterest {
   approved: boolean;
   createdAt: Date;
   influencer: Influencer;
+  user: User | {
+    id: string;
+    name: string | null;
+    email: string;
+    image: string | null;
+  };
 }
