@@ -1,7 +1,7 @@
-// components/dashboard/brand/profile/brand-profile-form.tsx
+// components/dashboard/brand/events/event-form.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -36,7 +36,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-toastify";
-import { AVAILABLE_CATEGORIES } from "@/lib/constants";
+import { AVAILABLE_CATEGORIES, EventStatus } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
 import { Event } from "@/types/brand";
 
@@ -48,16 +48,17 @@ const eventSchema = z.object({
   description: z.string().min(20, {
     message: "La descripción debe tener al menos 20 caracteres."
   }),
-  requirements: z.string().optional(),
+  requirements: z.string().optional().nullable(),
   compensation: z.string().min(3, {
     message: "La compensación debe tener al menos 3 caracteres."
   }),
   deadline: z.date().optional().nullable(),
   startDate: z.date().optional().nullable(),
   endDate: z.date().optional().nullable(),
-  location: z.string().optional(),
+  location: z.string().optional().nullable(),
   maxInfluencers: z.coerce.number().optional().nullable(),
   minFollowers: z.coerce.number().optional().nullable(),
+  status: z.string().optional(),
   // Las categorías y las imágenes se manejan por separado
 });
 
@@ -92,50 +93,89 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
       location: event?.location || "",
       maxInfluencers: event?.maxInfluencers || undefined,
       minFollowers: event?.minFollowers || undefined,
+      status: event?.status || EventStatus.DRAFT,
     },
   });
+
+
+  // Primero, definimos un tipo para lo que se envía a la API (diferentes tipos para fechas)
+  type EventApiData = Omit<EventFormValues, 'deadline' | 'startDate' | 'endDate'> & {
+    deadline?: string | null;
+    startDate?: string | null;
+    endDate?: string | null;
+    categories: string[];
+    images: string[];
+  };
 
   const onSubmit = async (values: EventFormValues) => {
     if (selectedCategories.length === 0) {
       toast.error("Debes seleccionar al menos una categoría");
       return;
     }
-
+  
     setIsSubmitting(true);
     
     try {
-      const eventData = {
+      // Crear un objeto para la API con el formato correcto
+      const eventApiData = {
         ...values,
+        // Convertir fechas a strings ISO si existen
+        deadline: values.deadline ? values.deadline.toISOString() : null,
+        startDate: values.startDate ? values.startDate.toISOString() : null,
+        endDate: values.endDate ? values.endDate.toISOString() : null,
+        // Agregar los campos adicionales
         categories: selectedCategories,
         images: images,
+        status: values.status || EventStatus.DRAFT
       };
-
+  
+      console.log("Enviando datos:", eventApiData);
+      
       const url = isEditing ? `/api/events/${event?.id}` : "/api/events";
       const method = isEditing ? "PUT" : "POST";
-
+  
       const response = await fetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(eventData),
+        body: JSON.stringify(eventApiData),
       });
-
+  
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Algo salió mal");
+        const errorData = await response.json();
+        console.error("Error response:", errorData);
+        
+        if (errorData.details) {
+          throw new Error(`Datos inválidos: ${JSON.stringify(errorData.details)}`);
+        }
+        
+        if (errorData.error) {
+          throw new Error(errorData.error);
+        }
+        
+        throw new Error("Algo salió mal al procesar tu solicitud");
       }
-
+  
       const data = await response.json();
       
       toast.success(
         isEditing ? "Evento actualizado correctamente" : "Evento creado correctamente"
       );
       
-      router.push(`/dashboard/brand/events/${data.id}`);
-      router.refresh();
+      // Asegurarse de que data.id exista antes de redirigir
+      if (data && data.id) {
+        console.log("Redirigiendo a:", `/dashboard/brand/events/${data.id}`);
+        router.push(`/dashboard/brand/events/${data.id}`);
+        router.refresh();
+      } else {
+        console.error("No se pudo obtener el ID del evento creado:", data);
+        // Alternativa si no hay ID
+        router.push('/dashboard/brand/events');
+        router.refresh();
+      }
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error completo:", error);
       toast.error(
         error instanceof Error
           ? error.message
@@ -159,11 +199,12 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
     setSelectedCategories(selectedCategories.filter((c) => c !== category));
   };
 
+  // Implementa esta función con uploadthing o similar en un entorno real
   const handleAddImage = () => {
     // Esta es una función simulada, debes implementar tu lógica de carga de imágenes
-    // Podrías usar uploadthing o alguna otra solución para subir imágenes
     const newImageUrl = `/images/placeholder-${Math.floor(Math.random() * 1000)}.jpg`;
     setImages([...images, newImageUrl]);
+    toast.info("Esta es una imagen de placeholder. Implementa la carga real de imágenes con uploadthing.");
   };
 
   const handleRemoveImage = (imageUrl: string) => {
@@ -233,6 +274,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
                         placeholder="Requisitos específicos para los influencers..."
                         className="h-24 resize-none"
                         {...field}
+                        value={field.value || ''} // Convertir null o undefined a string vacía
                       />
                     </FormControl>
                     <FormDescription>
@@ -394,7 +436,11 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
                   <FormItem>
                     <FormLabel>Ubicación</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ej: Ciudad, País o Virtual" {...field} />
+                      <Input 
+                        placeholder="Ej: Ciudad, País o Virtual" 
+                        {...field}
+                        value={field.value || ''} // Convertir null o undefined a string vacía
+                      />
                     </FormControl>
                     <FormDescription>
                       Dónde se realizará el evento, o "Virtual" si es online.
@@ -415,7 +461,6 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
                         type="number" 
                         min="1" 
                         placeholder="Ej: 10" 
-                        // Corregimos el error de tipo aquí, convirtiendo null/undefined a string vacía
                         value={field.value?.toString() || ''} 
                         onChange={(e) => {
                           const value = e.target.value === '' ? null : parseInt(e.target.value, 10);
@@ -442,7 +487,6 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
                         type="number" 
                         min="0" 
                         placeholder="Ej: 5000" 
-                        // Corregimos el error de tipo aquí, convirtiendo null/undefined a string vacía
                         value={field.value?.toString() || ''} 
                         onChange={(e) => {
                           const value = e.target.value === '' ? null : parseInt(e.target.value, 10);
@@ -458,6 +502,36 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Estado del evento</FormLabel>
+                  <Select
+                    defaultValue={field.value || EventStatus.DRAFT}
+                    onValueChange={field.onChange}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona un estado" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value={EventStatus.DRAFT}>Borrador</SelectItem>
+                      <SelectItem value={EventStatus.PUBLISHED}>Publicado</SelectItem>
+                      <SelectItem value={EventStatus.CLOSED}>Cerrado</SelectItem>
+                      <SelectItem value={EventStatus.CANCELLED}>Cancelado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    El estado actual del evento.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormItem>
               <FormLabel>Categorías*</FormLabel>

@@ -11,9 +11,10 @@ const eventSchema = z.object({
   description: z.string().min(20),
   requirements: z.string().optional().nullable(),
   compensation: z.string().min(1),
-  deadline: z.date().optional().nullable(),
-  startDate: z.date().optional().nullable(),
-  endDate: z.date().optional().nullable(),
+  // Modificar los campos de fecha para aceptar strings
+  deadline: z.string().datetime().transform(str => new Date(str)).optional().nullable(),
+  startDate: z.string().datetime().transform(str => new Date(str)).optional().nullable(),
+  endDate: z.string().datetime().transform(str => new Date(str)).optional().nullable(),
   location: z.string().optional().nullable(),
   status: z.enum([
     EventStatus.DRAFT,
