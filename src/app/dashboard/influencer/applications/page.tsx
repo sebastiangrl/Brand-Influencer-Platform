@@ -1,18 +1,18 @@
-// app/dashboard/influencer/events/page.tsx
+// app/dashboard/influencer/applications/page.tsx
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { UserRole } from "@/lib/constants";
-import InfluencerEventList from "@/components/dashboard/influencer/events/event-list";
+import MyApplications from "@/components/dashboard/influencer/events/my-applications";
 
 export const dynamic = "force-dynamic";
 
-export default async function InfluencerEventsPage() {
+export default async function InfluencerApplicationsPage() {
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user) {
-    return redirect("/auth/login?callbackUrl=/dashboard/influencer/events");
+    return redirect("/auth/login?callbackUrl=/dashboard/influencer/applications");
   }
 
   // Verificar si el usuario es un influencer
@@ -40,7 +40,7 @@ export default async function InfluencerEventsPage() {
 
   return (
     <div className="container mx-auto p-6">
-      <InfluencerEventList />
+      <MyApplications />
     </div>
   );
 }

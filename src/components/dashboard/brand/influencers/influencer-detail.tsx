@@ -74,7 +74,7 @@ export default function InfluencerDetail({ influencer }: InfluencerDetailProps) 
 
   // Función para invitar a un evento
   const inviteToEvent = () => {
-    router.push(`/dashboard/brand/events/create?influencer=${influencer.id}`);
+    router.push(`/dashboard/brand/influencers/invite/${influencer.id}`);
   };
 
   return (
@@ -240,37 +240,37 @@ export default function InfluencerDetail({ influencer }: InfluencerDetailProps) 
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Acciones</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button 
-                  className="w-full justify-start gap-2"
-                  onClick={startConversation}
-                >
-                  <MessageSquare className="h-4 w-4" />
-                  Contactar influencer
-                </Button>
-                <Button 
-                  className="w-full justify-start gap-2"
-                  onClick={inviteToEvent}
-                >
-                  <Tag className="h-4 w-4" />
-                  Invitar a evento
-                </Button>
-                <Button 
-                  variant="outline"
-                  className="w-full justify-start gap-2"
-                  onClick={() => {
-                    const url = window.location.href;
-                    navigator.clipboard.writeText(url);
-                    toast.success("Enlace copiado al portapapeles");
-                  }}
-                >
-                  <Share2 className="h-4 w-4" />
-                  Compartir perfil
-                </Button>
-              </CardContent>
-            </Card>
+              <CardTitle>Acciones</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button 
+                className="w-full justify-start gap-2"
+                onClick={startConversation}
+              >
+                <MessageSquare className="h-4 w-4" />
+                Contactar influencer
+              </Button>
+              <Button 
+                className="w-full justify-start gap-2"
+                onClick={() => router.push(`/dashboard/brand/influencers/invite/${influencer.id}`)}
+              >
+                <Tag className="h-4 w-4" />
+                Invitar a evento
+              </Button>
+              <Button 
+                variant="outline"
+                className="w-full justify-start gap-2"
+                onClick={() => {
+                  const url = window.location.href;
+                  navigator.clipboard.writeText(url);
+                  toast.success("Enlace copiado al portapapeles");
+                }}
+              >
+                <Share2 className="h-4 w-4" />
+                Compartir perfil
+              </Button>
+            </CardContent>
+          </Card>
             
             <Card>
               <CardHeader>

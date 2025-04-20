@@ -1,8 +1,9 @@
+//src/components/dashboard/influencer/mobile-nav-bar.tsx
 "use client";
 
 import React from "react";
 import Link from "next/link";
-import { User, Calendar, Bell, BarChart2 } from "lucide-react";
+import { User, Calendar, Bell, BarChart2, ListChecks } from "lucide-react";
 
 interface MobileNavBarProps {
   activeTab: string;
@@ -22,6 +23,13 @@ export default function MobileNavBar({ activeTab }: MobileNavBarProps) {
         <Calendar className={`w-5 h-5 ${activeTab === "events" ? "text-violet-600" : "text-gray-500"}`} />
         <span className={`text-xs mt-1 ${activeTab === "events" ? "text-violet-600 font-medium" : "text-gray-500"}`}>
           Eventos
+        </span>
+      </Link>
+      
+      <Link href="/dashboard/influencer/applications" className="flex flex-col items-center px-3 py-1 rounded-md">
+        <ListChecks className={`w-5 h-5 ${activeTab === "applications" ? "text-violet-600" : "text-gray-500"}`} />
+        <span className={`text-xs mt-1 ${activeTab === "applications" ? "text-violet-600 font-medium" : "text-gray-500"}`}>
+          Solicitudes
         </span>
       </Link>
       

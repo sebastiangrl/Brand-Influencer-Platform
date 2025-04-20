@@ -315,8 +315,7 @@ export default function InfluencerList({ initialInfluencers }: InfluencerListPro
                   variant="outline"
                   size="sm"
                   className="gap-1"
-                  onClick={() => router.push(`/dashboard/brand/events/create?influencer=${influencer.id}`)}
-                >
+                  onClick={() => router.push(`/dashboard/brand/influencers/invite/${influencer.id}`)}>
                   <Tag className="h-4 w-4" />
                   Invitar a evento
                 </Button>

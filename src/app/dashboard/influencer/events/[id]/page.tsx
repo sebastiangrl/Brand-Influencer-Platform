@@ -1,18 +1,36 @@
-// app/dashboard/influencer/events/page.tsx
+// app/dashboard/influencer/events/[id]/page.tsx
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { UserRole } from "@/lib/constants";
-import InfluencerEventList from "@/components/dashboard/influencer/events/event-list";
+import { UserRole, EventStatus } from "@/lib/constants";
+import EventDetail from "@/components/dashboard/influencer/events/event-detail";
+
+interface EventPageProps {
+  params: {
+    id: string;
+  };
+}
 
 export const dynamic = "force-dynamic";
 
-export default async function InfluencerEventsPage() {
+async function verifyEventAccess(eventId: string) {
+  // Verificar si el evento existe y está publicado
+  const event = await db.event.findUnique({
+    where: {
+      id: eventId,
+      status: EventStatus.PUBLISHED,
+    },
+  });
+
+  return !!event;
+}
+
+export default async function InfluencerEventPage({ params }: EventPageProps) {
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user) {
-    return redirect("/auth/login?callbackUrl=/dashboard/influencer/events");
+    return redirect(`/auth/login?callbackUrl=/dashboard/influencer/events/${params.id}`);
   }
 
   // Verificar si el usuario es un influencer
@@ -38,9 +56,15 @@ export default async function InfluencerEventsPage() {
     return redirect("/onboarding/influencer/rejected");
   }
 
+  // Verificar acceso al evento
+  const hasAccess = await verifyEventAccess(params.id);
+  if (!hasAccess) {
+    return redirect("/dashboard/influencer/events");
+  }
+
   return (
     <div className="container mx-auto p-6">
-      <InfluencerEventList />
+      <EventDetail eventId={params.id} />
     </div>
   );
 }
